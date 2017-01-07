@@ -14,8 +14,14 @@ namespace Goodbye
 {
     class Program
     {
-        static readonly IUsersService _userSvc = new UsersService();
-        static readonly IGroupsService _groupSvc = new GroupsService();
+        static readonly string _rootDomain = ConfigurationManager.AppSettings["RootDomain"];
+        static readonly string _rootOu = ConfigurationManager.AppSettings["RootOu"];
+        static readonly string _serviceUser = ConfigurationManager.AppSettings["ServiceUser"];
+        static readonly string _servicePassword = ConfigurationManager.AppSettings["ServicePassword"];
+        static readonly string _canSendEmail = ConfigurationManager.AppSettings["CanSendEmail"];
+
+        static readonly IUsersService _userSvc = new UsersService(_rootDomain, _rootOu, _serviceUser, _servicePassword);
+        static readonly IGroupsService _groupSvc = new GroupsService(_rootDomain, _rootOu, _serviceUser, _servicePassword);
 
         static void Main(string[] args)
         {
@@ -33,7 +39,12 @@ namespace Goodbye
             if (TerminateUserAccount(termUser))
             {
                 SuccessfullResponse(message);
-                SendEmailMessage(request);
+
+                if (Convert.ToBoolean(_canSendEmail))
+                {
+                    SendEmailMessage(request);
+                }
+                                
                 ExitApplication();
                 Environment.Exit(0);
             }
@@ -183,15 +194,13 @@ namespace Goodbye
         {
             var today = DateTime.Today;
             var dateOnly = today.Date;
-            var termDate = "TERM " + dateOnly.ToString("d");
-            var domain = ConfigurationManager.AppSettings["RootDomain"];
-            var userDistinquishedName = "LDAP://" + domain + "/" + termUser.DistinguishedName;
-            var newContainer = "LDAP://" + domain + "/OU=Disabled Accounts,DC=npc,DC=local";
+            var termDate = "TERM " + dateOnly.ToString("d");            
+            var newContainer = $"OU=Disabled Accounts,{_rootOu}";
 
             ValidateUserGroupMemberships(termUser);
 
             _groupSvc.RemoveAllUserGroupMemberships(termUser.SamAccountName);
-            _userSvc.MoveUser(userDistinquishedName, newContainer);
+            _userSvc.MoveUser(termUser.DistinguishedName, newContainer);
 
             var response = _userSvc.UpdateUser(termDate, false, null, null, true, termUser.SamAccountName);
 
