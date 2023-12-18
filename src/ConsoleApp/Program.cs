@@ -224,7 +224,7 @@ namespace Goodbye
 
             if (request.ServiceUser.EmailAddress == null)
             {
-                request.ServiceUser.EmailAddress = "terminationreport@nephronpharm.com";
+                request.ServiceUser.EmailAddress = "terminationreport@fabrikam.com";
             }
 
             var message = new MailMessage(request.ServiceUser.EmailAddress, toEmailAddress);
